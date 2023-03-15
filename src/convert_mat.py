@@ -1,11 +1,22 @@
 import scipy
 import numpy as np
 import pandas as pd
+import os
+
+
+#Dataset: https://lampz.tugraz.at/~bci/database/013-2015/description.pdf
 
 def main():
-    for i in range(1, 7):
-        for j in range(1, 3):
-            convert_mat_file(i, j)
+
+    if not os.path.exists('data'):
+        print("Please add a 'data' folder and download datasets into this folder")
+    else:
+        if not os.path.exists('pickle_df'):
+            os.makedirs('pickle_df')
+
+        for i in range(1, 7):
+            for j in range(1, 3):
+                convert_mat_file(i, j)
 
 def convert_mat_file(subject_id, trial):
     """Loads the .mat files from the 'data' folder. It extracts the EEG channels and the events,
