@@ -10,13 +10,37 @@ import random
 
 
 def butterworth_bandpass(data: np.ndarray, low_cut: int = 1, high_cut: int = 10, fs: int = 512, order: int = 2) -> np.ndarray:
+    """Applies a butterworth bandpass filter to the timeseries data
+
+    Args:
+        data (np.ndarray): The timeseries data
+        low_cut (int, optional): Low cut for the butterworth filter. Defaults to 1.
+        high_cut (int, optional): High cut for the butterworth filter. Defaults to 10.
+        fs (int, optional): Sampling rate. Defaults to 512.
+        order (int, optional): Order for the butterworth filter. Defaults to 2.
+
+    Returns:
+        np.ndarray: Filtered timeseries
+    """
+
     nyq = 0.5 * fs
     low = low_cut / nyq
     high = high_cut / nyq
     sos = butter(order, [low, high], analog=False, btype='band', output='sos')
     return sosfilt(sos, data)
 
-def create_windows(timeseries: np.ndarray, events_df: pd.DataFrame, window_size: int = 256) -> Tuple[list]:
+def create_windows(timeseries: np.ndarray, events_df: pd.DataFrame, window_size: int = 308) -> Tuple[list, list]:
+    """Creates fixed-sized windows from the series and events
+
+    Args:
+        timeseries (np.ndarray): Timeseries of the data
+        events_df (pd.DataFrame): Labels of the data
+        window_size (int, optional): The epochs per window size. Defaults to 308 (which is ~600ms at 512hz fs).
+
+    Returns:
+        Tuple[list, list]: List with the windows and list with the labels
+    """
+
     timestamps = events_df.index.to_list()
     events = events_df.to_numpy()
 
@@ -31,6 +55,16 @@ def create_windows(timeseries: np.ndarray, events_df: pd.DataFrame, window_size:
     return (x, y)
 
 def create_dataset(data_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Creates the dataset from the given directory. It reads all pickle files, splits them into a train/test split,
+    creates windows, applies preprocessing and balances the data
+
+    Args:
+        data_dir (str): The directory in which the pickle datafiles are located
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: in order: Training timeseries (train_x), Training lables (train_y), Testing timeseries (test_x), Testing labels (text_y)
+    """
+
     file_names = get_raw_file_paths(data_dir)
     train_files, test_files = split_train_test(file_names)
 
@@ -50,24 +84,39 @@ def create_dataset(data_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, n
         x_test += x
         y_test += y
 
-    return (np.asarray(x_train), np.asarray(y_train), np.asarray(x_test), np.asarray(y_test))
 
-def load_file(path: str) -> pd.DataFrame:
-    file = pd.read_pickle(path)
-    return file
+    x_train_balanced, y_train_balanced = balance_data(np.asarray(x_train), np.asarray(y_train))
+
+    return (x_train_balanced, y_train_balanced, np.asarray(x_test), np.asarray(y_test))
     
 
-def process_recording(path: str):
-    df = load_file(path)
+def process_recording(path: str) -> Tuple[list, list]:
+    """Processes one recording. It applies filtering and creates windows of 600ms
+
+    Args:
+        path (str): The path to pickle datafile
+
+    Returns:
+        Tuple[list, list]: List of the timeseries windows (x) and a list of the labels (y)
+    """
+
+    df = pd.read_pickle(path)
     events = df['events'].dropna()
     timeseries = df.drop(columns='events')
     timeseries_np = timeseries.to_numpy()
     filtered = butterworth_bandpass(timeseries_np)
-
     return create_windows(filtered, events)
 
-
 def get_raw_file_paths(path) -> list[str]:
+    """Extracts the pickle file filenames from a directory
+
+    Args:
+        path (_type_): Path to the folder
+
+    Returns:
+        list[str]: List with filenames
+    """
+
     file_name = os.listdir(path)
     paths = list()
 
@@ -76,7 +125,16 @@ def get_raw_file_paths(path) -> list[str]:
 
     return paths
 
-def split_train_test(filenames: list[str]) -> Tuple[list[str]]:
+def split_train_test(filenames: list[str]) -> Tuple[list[str], list[str]]:
+    """Randomly selects one subject for the test split and splist the files accordingly.
+
+    Args:
+        filenames (list[str]): List with the filenames of the data
+
+    Returns:
+        Tuple[list[str], list[str]]]: List of filenames for the training data and list for the testing data
+    """
+
     train = list()
     test = list()
     selected_file = random.choice(filenames)
@@ -88,6 +146,41 @@ def split_train_test(filenames: list[str]) -> Tuple[list[str]]:
             train.append(file)
 
     return (train, test)
+
+def balance_data(timeseries: np.ndarray, labels: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Balances the data to equal distributions
+
+    Args:
+        timeseries (np.ndarray): The timeseries (x) of the dataset
+        labels (np.ndarray): The labels (y) of the dataset
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: The balanced timeseries (x) and labels (y)
+    """
+
+    label_count = (np.count_nonzero(labels == 0), np.count_nonzero(labels == 1))
+
+    class_to_sample = label_count.index(min(label_count))
+    sample_count = label_count[(class_to_sample + 1) % 2] - label_count[class_to_sample]
+
+    indexes = np.where(labels == class_to_sample)[0]
+    samples = np.random.choice(indexes, sample_count, replace=True)
+
+    sampled_labels = np.full(sample_count, class_to_sample)
+    sampled_timeseries = np.empty((sample_count, timeseries.shape[1], timeseries.shape[2]))
+    for i, sample in enumerate(samples):
+        sampled_timeseries[i] = timeseries[sample]
+    # Not the most efficient method, but it works     
+    timeseries_balanced = np.concatenate([timeseries, sampled_timeseries])
+    labels_balanced = np.concatenate([labels, sampled_labels])
+
+    randomize = np.arange(len(timeseries_balanced))
+    np.random.shuffle(randomize)
+    timeseries_shuffled = timeseries_balanced[randomize]
+    labels_shuffled = labels_balanced[randomize]
+
+    return (timeseries_shuffled, labels_shuffled)
+
 
 if __name__ == '__main__':
     x_train, y_train, x_test, y_test = create_dataset('./pickle_df')
