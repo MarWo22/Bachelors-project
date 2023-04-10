@@ -29,7 +29,7 @@ def butterworth_bandpass(data: np.ndarray, low_cut: int = 1, high_cut: int = 10,
     sos = butter(order, [low, high], analog=False, btype='band', output='sos')
     return sosfilt(sos, data)
 
-def create_windows(timeseries: np.ndarray, events_df: pd.DataFrame, window_size: int = 308) -> Tuple[list, list]:
+def create_windows(timeseries: np.ndarray, events_df: pd.DataFrame, window_size: int = 308) -> list:
     """Creates fixed-sized windows from the series and events
 
     Args:
@@ -41,20 +41,18 @@ def create_windows(timeseries: np.ndarray, events_df: pd.DataFrame, window_size:
         Tuple[list, list]: List with the windows and list with the labels
     """
 
-    timestamps = events_df.index.to_list()
+    timestamps = events_df.index.to_numpy()
     events = events_df.to_numpy()
 
-    x = list()
-    y = list()
+    data = list()
 
     for timestamp, label in zip(timestamps, events):
         window = timeseries[timestamp : min(timestamp + window_size, timeseries.shape[0])]
-        x.append(window)
-        y.append(label)
+        data.append([window, label])
 
-    return (x, y)
+    return data
 
-def create_dataset(data_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def create_dataset(data_dir: str) -> Tuple[list, list, list]:
     """Creates the dataset from the given directory. It reads all pickle files, splits them into a train/test split,
     creates windows, applies preprocessing and balances the data
 
@@ -66,31 +64,32 @@ def create_dataset(data_dir: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, n
     """
 
     file_names = get_raw_file_paths(data_dir)
-    train_files, test_files = split_train_test(file_names)
-
-    x_train = list()
-    y_train = list()
+    train_files, val_files, test_files = split_train_val_test(file_names)
+    
+    train = list()
 
     for file in train_files:
-        x, y = process_recording(file)
-        x_train += x
-        y_train += y
+        data = process_recording(file)
+        train += data
 
-    x_test = list()
-    y_test = list()
+    val = list()
+
+    for file in val_files:
+        data = process_recording(file)
+        val += data
+
+    test = list()
 
     for file in test_files:
-        x, y = process_recording(file)
-        x_test += x
-        y_test += y
+        data = process_recording(file)
+        test += data
 
 
-    x_train_balanced, y_train_balanced = balance_data(np.asarray(x_train), np.asarray(y_train))
-
-    return (x_train_balanced, y_train_balanced, np.asarray(x_test), np.asarray(y_test))
+    train_balanced = balance_data(train)
+    return (train_balanced, val, test)
     
 
-def process_recording(path: str) -> Tuple[list, list]:
+def process_recording(path: str) -> list:
     """Processes one recording. It applies filtering and creates windows of 600ms
 
     Args:
@@ -121,11 +120,11 @@ def get_raw_file_paths(path) -> list[str]:
     paths = list()
 
     for file in file_name:
-        paths.append('./pickle_df/' + file)
+        paths.append(path + '/' + file)
 
     return paths
 
-def split_train_test(filenames: list[str]) -> Tuple[list[str], list[str]]:
+def split_train_val_test(filenames: list[str]) -> Tuple[list[str], list[str], list[str]]:
     """Randomly selects one subject for the test split and splist the files accordingly.
 
     Args:
@@ -134,7 +133,6 @@ def split_train_test(filenames: list[str]) -> Tuple[list[str], list[str]]:
     Returns:
         Tuple[list[str], list[str]]]: List of filenames for the training data and list for the testing data
     """
-
     train = list()
     test = list()
     selected_file = random.choice(filenames)
@@ -145,9 +143,14 @@ def split_train_test(filenames: list[str]) -> Tuple[list[str], list[str]]:
         else:
             train.append(file)
 
-    return (train, test)
+    # Grabs 20 for validation set
+    random.shuffle(train)
+    val = train[:20]
+    train = train[20:]
+    
+    return (train, val, test)
 
-def balance_data(timeseries: np.ndarray, labels: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def balance_data(data: list) -> list:
     """Balances the data to equal distributions
 
     Args:
@@ -158,35 +161,23 @@ def balance_data(timeseries: np.ndarray, labels: np.ndarray) -> Tuple[np.ndarray
         Tuple[np.ndarray, np.ndarray]: The balanced timeseries (x) and labels (y)
     """
 
-    label_count = (np.count_nonzero(labels == 0), np.count_nonzero(labels == 1))
 
-    class_to_sample = label_count.index(min(label_count))
-    sample_count = label_count[(class_to_sample + 1) % 2] - label_count[class_to_sample]
+    class_a = sum(1 for i in data if i[1] == 0)
+    class_b = len(data) - class_a
 
-    indexes = np.where(labels == class_to_sample)[0]
-    samples = np.random.choice(indexes, sample_count, replace=True)
+    class_to_sample = 0 if class_a < class_b else 1
+    sample_count = max(class_a, class_b) - min(class_a, class_b)
 
-    sampled_labels = np.full(sample_count, class_to_sample)
-    sampled_timeseries = np.empty((sample_count, timeseries.shape[1], timeseries.shape[2]))
-    for i, sample in enumerate(samples):
-        sampled_timeseries[i] = timeseries[sample]
-    # Not the most efficient method, but it works     
-    timeseries_balanced = np.concatenate([timeseries, sampled_timeseries])
-    labels_balanced = np.concatenate([labels, sampled_labels])
+    minority_class = [i for i in data if i[1] == class_to_sample]
 
-    randomize = np.arange(len(timeseries_balanced))
-    np.random.shuffle(randomize)
-    timeseries_shuffled = timeseries_balanced[randomize]
-    labels_shuffled = labels_balanced[randomize]
+    oversamples = random.choices(minority_class, k=sample_count)
+    
+    data += oversamples
 
-    return (timeseries_shuffled, labels_shuffled)
-
+    return data
+        
 
 if __name__ == '__main__':
-    x_train, y_train, x_test, y_test = create_dataset('./pickle_df')
-    print(x_train)
-    print(x_train.shape)
-    print(y_train.shape)
-    print(np.count_nonzero(y_train == 0))
-    print(np.count_nonzero(y_train == 1))
-        
+    file_names = get_raw_file_paths('./pickle_df')
+    train_files, val_files, test_files = split_train_val_test(file_names)
+    data = process_recording(train_files[0])
