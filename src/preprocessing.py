@@ -47,8 +47,9 @@ def create_windows(timeseries: np.ndarray, events_df: pd.DataFrame, window_size:
     data = list()
 
     for timestamp, label in zip(timestamps, events):
-        window = timeseries[timestamp : min(timestamp + window_size, timeseries.shape[0])]
-        data.append([window, label])
+        window = timeseries[timestamp : min(timestamp + window_size, timeseries.shape[0])].astype(np.float32)
+        window = np.swapaxes(window,0,1)
+        data.append([window, int(label)])
 
     return data
 
