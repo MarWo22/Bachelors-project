@@ -15,11 +15,12 @@ class NestedDataSet(Dataset):
         # Currently an ugly solution, since the current preprocessing method returns a list of (x, y) lists
         x_list, y_list = [], []
         for (x, y) in data:
-            x_list.append(x)
+            # Note the extra nesting
+            x_list.append([x])
             y_list.append(y)
 
-        self.x = np.asarray(x_list)
-        self.y = np.asarray(y_list)
+        self.x = torch.tensor(x_list)
+        self.y = torch.tensor(y_list, dtype=torch.long)
 
     def __len__(self):
         return len(self.x)
@@ -27,8 +28,7 @@ class NestedDataSet(Dataset):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        # X is extra nested
-        return (torch.tensor([self.x[idx]]), torch.tensor(self.y[idx], dtype=torch.long))
+        return (self.x[idx], self.y[idx])
 
 
 class DataModule(pl.LightningDataModule):
