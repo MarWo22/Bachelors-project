@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import os
 
+from tqdm import tqdm
+
 
 #Dataset: https://lampz.tugraz.at/~bci/database/013-2015/description.pdf
 
@@ -14,11 +16,12 @@ def main():
         if not os.path.exists('pickle_df'):
             os.makedirs('pickle_df')
 
-        for i in range(1, 7):
-            for j in range(1, 3):
-                convert_mat_file(i, j)
+        with tqdm(total=120) as pbar:
+            for i in range(1, 7):
+                for j in range(1, 3):
+                    convert_mat_file(i, j, pbar)
 
-def convert_mat_file(subject_id, trial):
+def convert_mat_file(subject_id, trial, pbar):
     """Loads the .mat files from the 'data' folder. It extracts the EEG channels and the events,
     and converts them to a pandas dataframe. The dataframes are then pickled and saved to the 'pickle_df' folder
 
@@ -53,7 +56,7 @@ def convert_mat_file(subject_id, trial):
 
         # Add the events to the numpy array. A normal event is encoded as a 0, whereas a ErrP event is encoded with a 1
         for timestamp, code in zip(event_timestamps, event_codes):
-            if code in [5, 10, 4, 8]: # Normal event
+            if code in [5, 10]: # Normal event
                 events[timestamp] = 0
             elif code in [6, 9]: # ErrP Event
                 events[timestamp] = 1
@@ -63,6 +66,7 @@ def convert_mat_file(subject_id, trial):
 
         # Write to a pickle file
         df.to_pickle('pickle_df/Subject0{id}_s{trial}_r{run}'.format(id=subject_id, trial=trial, run=run))
+        pbar.update(1)
 
 if __name__ == '__main__':
     main()
