@@ -19,7 +19,7 @@ class NestedDataSet(Dataset):
             x_list.append([x])
             y_list.append(y)
 
-        self.x = torch.tensor(x_list)
+        self.x = torch.tensor(np.array(x_list))
         self.y = torch.tensor(y_list, dtype=torch.long)
 
     def __len__(self):

@@ -207,3 +207,4 @@ cython_debug/
 *.pdfsync
 
 lightning_logs
+off_data_testing/pickle_df
