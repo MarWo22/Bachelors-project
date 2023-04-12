@@ -135,6 +135,7 @@ class EEGNet(pl.LightningModule):
         x, y = train_batch
         logits = self.forward(x)
         loss = self.cross_entropy_loss(logits, y)
+        print(loss)
         self.log('train loss', loss)
         return loss
     
