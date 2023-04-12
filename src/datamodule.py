@@ -43,13 +43,13 @@ class DataModule(pl.LightningDataModule):
         self.batch_size = batch_size
 
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(self.train_set, batch_size = self.batch_size, shuffle=True)
+        return DataLoader(self.train_set, batch_size = self.batch_size, shuffle=True, num_workers=6)
     
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(self.val_set, batch_size = self.batch_size, shuffle=False)
+        return DataLoader(self.val_set, batch_size = self.batch_size, shuffle=False, num_workers=6)
     
     def test_dataloader(self) -> DataLoader:
-        return DataLoader(self.test_set, batch_size = self.batch_size, shuffle=False)
+        return DataLoader(self.test_set, batch_size = self.batch_size, shuffle=False, num_workers=6)
     
 
 #Previous method
