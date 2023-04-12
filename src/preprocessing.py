@@ -43,12 +43,11 @@ def create_windows(timeseries: np.ndarray, events_df: pd.DataFrame, window_size:
 
     timestamps = events_df.index.to_numpy()
     events = events_df.to_numpy()
-
     data = list()
 
     for timestamp, label in zip(timestamps, events):
-        window = timeseries[timestamp : min(timestamp + window_size, timeseries.shape[0])].astype(np.float32)
-        window = np.swapaxes(window,0,1)
+        # Create the window. Do a min boundary check to make sure it doesn't go out of bounds
+        window = timeseries[:, timestamp : min(timestamp + window_size, timeseries.shape[1])].astype(np.float32)
         data.append([window, int(label)])
 
     return data
@@ -104,7 +103,8 @@ def process_recording(path: str) -> list:
     events = df['events'].dropna()
     timeseries = df.drop(columns='events')
     timeseries_np = timeseries.to_numpy()
-    filtered = butterworth_bandpass(timeseries_np)
+    timeseries_transposed = np.transpose(timeseries_np)
+    filtered = butterworth_bandpass(timeseries_transposed)
     return create_windows(filtered, events)
 
 def get_raw_file_paths(path) -> list[str]:
