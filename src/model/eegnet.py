@@ -102,7 +102,7 @@ class EEGNet(pl.LightningModule):
             nn.Dropout(p=dropout))
 
         self.lin = nn.Linear(self.F2 * self.feature_dim, num_classes, bias=False)
-
+        
     @property
     def feature_dim(self):
         with torch.no_grad():
@@ -129,21 +129,20 @@ class EEGNet(pl.LightningModule):
         return x
     
     def cross_entropy_loss(self, logits, labels):
-        return F.nll_loss(logits, labels)
+        return F.cross_entropy(logits, labels)
     
-    def training_step(self, train_batch, batch_id):
+    def training_step(self, train_batch, batch_idx):
         x, y = train_batch
-        logits = self.forward(x)
+        logits = self(x)
         loss = self.cross_entropy_loss(logits, y)
-        print(loss)
-        self.log('train loss', loss)
+        self.logger.log_metrics({'train_loss': loss}, step=batch_idx)
         return loss
     
-    def validation_step(self, val_batch, batch_id):
+    def validation_step(self, val_batch, batch_idx):
         x, y = val_batch
-        logits = self.forward(x)
+        logits = self(x)
         loss = self.cross_entropy_loss(logits, y)
-        self.log('validation loss', loss)
+        self.logger.log_metrics({'val_loss': loss}, step=batch_idx)
         return loss
     
     def configure_optimizers(self):
