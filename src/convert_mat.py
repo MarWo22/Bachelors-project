@@ -60,6 +60,8 @@ def convert_mat_file(subject_id, trial, pbar):
                 events[timestamp] = 0
             elif code in [6, 9]: # ErrP Event
                 events[timestamp] = 1
+            # There are also two remaining codes: 4 & 8. 
+            # After manual inspection I was not confident in saying they belonged to one of the aforementioned classes, so they are excluded
         
         # Add the events to the dataframe
         df["events"] = events  

@@ -1,8 +1,8 @@
 import torch
 from torch import nn, optim
 import pytorch_lightning as pl
-from torch.nn import functional as F
-
+import torch.nn.functional as F
+from torchmetrics.functional import accuracy
 
 class Conv2dWithConstraint(nn.Conv2d):
     def __init__(self, *args, max_norm: int = 1, **kwargs):
@@ -129,22 +129,42 @@ class EEGNet(pl.LightningModule):
         return x
     
     def cross_entropy_loss(self, logits, labels):
-        return F.cross_entropy(logits, labels)
+        return F.binary_cross_entropy_with_logits(logits, labels)
     
     def training_step(self, train_batch, batch_idx):
-        x, y = train_batch
+        x, target = train_batch
         logits = self(x)
+
+        y = torch.zeros(logits.shape[0], logits.shape[1])
+        y[range(y.shape[0]), target]=1
+
         loss = self.cross_entropy_loss(logits, y)
-        self.logger.log_metrics({'train_loss': loss}, step=batch_idx)
+        self.logger.log_metrics({'train_loss': loss})
         return loss
     
     def validation_step(self, val_batch, batch_idx):
-        x, y = val_batch
+        x, target = val_batch
         logits = self(x)
+
+        y = torch.zeros(logits.shape[0], logits.shape[1])
+        y[range(y.shape[0]), target]=1
         loss = self.cross_entropy_loss(logits, y)
-        self.logger.log_metrics({'val_loss': loss}, step=batch_idx)
+        self.logger.log_metrics({'val_loss': loss})
         return loss
     
+    def test_step(self, test_batch, batch_idx):
+        x, target = test_batch
+        logits = self(x)
+
+        y = torch.zeros(logits.shape[0], logits.shape[1])
+        y[range(y.shape[0]), target]=1
+        loss = self.cross_entropy_loss(logits, y)
+        acc = accuracy(logits, y, 'binary')
+        metrics = {"test_acc": acc, "test_loss": loss}
+        self.log_dict(metrics)
+        return metrics
+
+
     def configure_optimizers(self):
         optimizer = optim.SGD(self.parameters(), lr=0.001, momentum=0.9)
         return optimizer
