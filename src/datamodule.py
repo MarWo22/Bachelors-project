@@ -9,7 +9,7 @@ class NestedDataSet(Dataset):
 
     """
 
-    def __init__(self, data) -> None:
+    def __init__(self, data: list) -> None:
         super().__init__()
 
         # Currently an ugly solution, since the current preprocessing method returns a list of (x, y) lists
@@ -21,6 +21,7 @@ class NestedDataSet(Dataset):
 
         self.x = torch.tensor(np.array(x_list))
         self.y = torch.tensor(y_list, dtype=torch.long)
+
 
     def __len__(self):
         return len(self.x)
@@ -35,7 +36,7 @@ class DataModule(pl.LightningDataModule):
     """Datamodule for the lightning trainer
 
     """
-    def __init__(self, train, val, test, batch_size) -> None:
+    def __init__(self, train, val: list, test: list, batch_size: int) -> None:
         super().__init__()
         self.train_set = NestedDataSet(train)
         self.val_set = NestedDataSet(val)
@@ -43,13 +44,14 @@ class DataModule(pl.LightningDataModule):
         self.batch_size = batch_size
 
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(self.train_set, batch_size = self.batch_size, shuffle=True, num_workers=6)
+        return DataLoader(self.train_set, batch_size = self.batch_size, shuffle=True)
     
     def val_dataloader(self) -> DataLoader:
-        return DataLoader(self.val_set, batch_size = self.batch_size, shuffle=False, num_workers=6)
+        return DataLoader(self.val_set, batch_size = self.batch_size, shuffle=False)
     
     def test_dataloader(self) -> DataLoader:
-        return DataLoader(self.test_set, batch_size = self.batch_size, shuffle=False, num_workers=6)
+        return DataLoader(self.test_set, batch_size = self.batch_size, shuffle=False)
+
     
 
 #Previous method

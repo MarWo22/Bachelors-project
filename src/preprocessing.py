@@ -138,6 +138,7 @@ def split_train_val_test(filenames: list[str]) -> Tuple[list[str], list[str], li
     test = list()
     selected_file = random.choice(filenames)
     subject = selected_file.split('/')[-1][7:9]
+    print('Selected test subject:', subject)
     for file in filenames:
         if file.split('/')[-1][7:9] == subject:
             test.append(file)

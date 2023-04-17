@@ -135,10 +135,8 @@ class EEGNet(pl.LightningModule):
         x, target = train_batch
         logits = self(x)
 
-        y = torch.zeros(logits.shape[0], logits.shape[1])
-        y[range(y.shape[0]), target]=1
-
-        loss = self.cross_entropy_loss(logits, y)
+        y = F.one_hot(target, num_classes=self.num_classes)
+        loss = self.cross_entropy_loss(logits, y.float())
         self.logger.log_metrics({'train_loss': loss})
         return loss
     
@@ -146,9 +144,8 @@ class EEGNet(pl.LightningModule):
         x, target = val_batch
         logits = self(x)
 
-        y = torch.zeros(logits.shape[0], logits.shape[1])
-        y[range(y.shape[0]), target]=1
-        loss = self.cross_entropy_loss(logits, y)
+        y = F.one_hot(target, num_classes=self.num_classes)
+        loss = self.cross_entropy_loss(logits, y.float())
         self.logger.log_metrics({'val_loss': loss})
         return loss
     
@@ -156,9 +153,8 @@ class EEGNet(pl.LightningModule):
         x, target = test_batch
         logits = self(x)
 
-        y = torch.zeros(logits.shape[0], logits.shape[1])
-        y[range(y.shape[0]), target]=1
-        loss = self.cross_entropy_loss(logits, y)
+        y = F.one_hot(target, num_classes=self.num_classes)
+        loss = self.cross_entropy_loss(logits, y.float())
         acc = accuracy(logits, y, 'binary')
         metrics = {"test_acc": acc, "test_loss": loss}
         self.log_dict(metrics)
