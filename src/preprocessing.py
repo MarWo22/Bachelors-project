@@ -9,7 +9,7 @@ import random
 
 
 
-def butterworth_bandpass(data: np.ndarray, low_cut: int = 1, high_cut: int = 10, fs: int = 512, order: int = 2) -> np.ndarray:
+def butterworth_bandpass(data: np.ndarray, low_cut: int = 1, high_cut: int = 10, fs: int = 512, order: int = 3) -> np.ndarray:
     """Applies a butterworth bandpass filter to the timeseries data
 
     Args:
@@ -49,7 +49,8 @@ def create_windows(timeseries: np.ndarray, events_df: pd.DataFrame, window_size:
         # Create the window. Do a min boundary check to make sure it doesn't go out of bounds
         window = timeseries[:, timestamp : min(timestamp + window_size, timeseries.shape[1])].astype(np.float32)
         data.append([window, int(label)])
-
+    
+    random.shuffle(data)
     return data
 
 def create_dataset(data_dir: str) -> Tuple[list, list, list]:
@@ -138,6 +139,7 @@ def split_train_val_test(filenames: list[str]) -> Tuple[list[str], list[str], li
     test = list()
     selected_file = random.choice(filenames)
     subject = selected_file.split('/')[-1][7:9]
+    subject = '01'
     print('Selected test subject:', subject)
     for file in filenames:
         if file.split('/')[-1][7:9] == subject:
