@@ -31,6 +31,31 @@ class NestedDataSet(Dataset):
             idx = idx.tolist()
         return (self.x[idx], self.y[idx])
 
+class predictDataSet(Dataset):
+    def __init__(self, data: list) -> None:
+        super().__init__()
+
+        # Currently an ugly solution, since the current preprocessing method returns a list of (x, y) lists
+        x_list, y_list = [], []
+        for (x, y) in data:
+            # Note the extra nesting
+            x_list.append([x])
+            y_list.append(y)
+
+        self.x = torch.tensor(np.array(x_list))
+        self.y = torch.tensor(y_list, dtype=torch.long)
+
+    def __len__(self):
+        return len(self.x)
+    
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+        return self.x[idx]
+    
+    def get_labels(self):
+        return self.y
+
 
 class DataModule(pl.LightningDataModule):
     """Datamodule for the lightning trainer
