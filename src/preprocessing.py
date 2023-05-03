@@ -51,9 +51,11 @@ def create_windows(timeseries: np.ndarray, events_df: pd.DataFrame, window_size:
         data.append([window, int(label)])
     
     random.shuffle(data)
-    return data
+    # Split back into two lists: windows and labels
+    windows, labels = zip(*data)
+    return (list(windows), list(labels))
 
-def create_dataset(data_dir: str) -> Tuple[list, list, list]:
+def create_dataset(data_dir: str, test_subject: int = -1) -> Tuple[list, list, list]:
     """Creates the dataset from the given directory. It reads all pickle files, splits them into a train/test split,
     creates windows, applies preprocessing and balances the data
 
@@ -65,25 +67,28 @@ def create_dataset(data_dir: str) -> Tuple[list, list, list]:
     """
 
     file_names = get_raw_file_paths(data_dir)
-    train_files, val_files, test_files = split_train_val_test(file_names)
+    train_files, val_files, test_files = split_train_val_test(file_names, test_subject)
     
-    train = list()
+    train = [[], []]
 
     for file in train_files:
         data = process_recording(file)
-        train += data
+        train[0] += data[0]
+        train[1] += data[1]
 
-    val = list()
+    val = [[], []]
 
     for file in val_files:
         data = process_recording(file)
-        val += data
+        val[0] += data[0]
+        val[1] += data[1]
 
-    test = list()
+    test = [[], []]
 
     for file in test_files:
         data = process_recording(file)
-        test += data
+        test[0] += data[0]
+        test[1] += data[1]
 
 
     train_balanced = balance_data(train)
@@ -126,7 +131,7 @@ def get_raw_file_paths(path) -> list[str]:
 
     return paths
 
-def split_train_val_test(filenames: list[str]) -> Tuple[list[str], list[str], list[str]]:
+def split_train_val_test(filenames: list[str], test_subject: int) -> Tuple[list[str], list[str], list[str]]:
     """Randomly selects one subject for the test split and splist the files accordingly.
 
     Args:
@@ -137,10 +142,12 @@ def split_train_val_test(filenames: list[str]) -> Tuple[list[str], list[str], li
     """
     train = list()
     test = list()
-    selected_file = random.choice(filenames)
-    subject = selected_file.split('/')[-1][7:9]
-    subject = '01'
-    print('Selected test subject:', subject)
+    if test_subject == -1:
+        selected_file = random.choice(filenames)
+        subject = selected_file.split('/')[-1][7:9]
+        print("Selected test subject:", subject)
+    else:
+        subject = '0' + str(test_subject)
     for file in filenames:
         if file.split('/')[-1][7:9] == subject:
             test.append(file)
@@ -164,21 +171,22 @@ def balance_data(data: list) -> list:
     Returns:
         Tuple[np.ndarray, np.ndarray]: The balanced timeseries (x) and labels (y)
     """
+    dataZipped = list(zip(data[0], data[1]))
 
-
-    class_a = sum(1 for i in data if i[1] == 0)
-    class_b = len(data) - class_a
+    class_a = sum(1 for i in dataZipped if i[1] == 0)
+    class_b = len(dataZipped) - class_a
 
     class_to_sample = 0 if class_a < class_b else 1
     sample_count = max(class_a, class_b) - min(class_a, class_b)
 
-    minority_class = [i for i in data if i[1] == class_to_sample]
+    minority_class = [i for i in dataZipped if i[1] == class_to_sample]
 
     oversamples = random.choices(minority_class, k=sample_count)
     
-    data += oversamples
+    dataZipped += oversamples
 
-    return data
+    windows, labels = zip(*dataZipped)
+    return (list(windows), list(labels))
         
 
 if __name__ == '__main__':

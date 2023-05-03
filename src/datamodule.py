@@ -12,12 +12,10 @@ class NestedDataSet(Dataset):
     def __init__(self, data: list) -> None:
         super().__init__()
 
-        # Currently an ugly solution, since the current preprocessing method returns a list of (x, y) lists
-        x_list, y_list = [], []
-        for (x, y) in data:
-            # Note the extra nesting
-            x_list.append([x])
-            y_list.append(y)
+        x_list, y_list = data
+
+        # Extra nesting
+        x_list = [[i] for i in x_list]
 
         self.x = torch.tensor(np.array(x_list))
         self.y = torch.tensor(y_list, dtype=torch.long)
@@ -35,12 +33,10 @@ class predictDataSet(Dataset):
     def __init__(self, data: list) -> None:
         super().__init__()
 
-        # Currently an ugly solution, since the current preprocessing method returns a list of (x, y) lists
-        x_list, y_list = [], []
-        for (x, y) in data:
-            # Note the extra nesting
-            x_list.append([x])
-            y_list.append(y)
+        x_list, y_list = data
+
+        # Extra nesting
+        x_list = [[i] for i in x_list]
 
         self.x = torch.tensor(np.array(x_list))
         self.y = torch.tensor(y_list, dtype=torch.long)
