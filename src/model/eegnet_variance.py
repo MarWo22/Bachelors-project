@@ -138,7 +138,8 @@ class EEGNetMultiHeaded(pl.LightningModule):
         mean = self.mean_node(x)
 
         mean, variance = self.sampling_softmax([mean, variance])
-        return (mean, variance)
+
+        return torch.stack([mean, variance])
     
     def beta_nll_loss_classification(self, mean: Tensor, variance: Tensor, target: Tensor, beta: float = 0.5):
 
@@ -207,6 +208,9 @@ class EEGNetMultiHeaded(pl.LightningModule):
 
     def predict_step(self, batch, batch_idx, dataloader_idx=0):
         return self(batch)
+
+    def predict_variance(self, batch):
+        return self(batch)[1]
 
 
     def configure_optimizers(self):
