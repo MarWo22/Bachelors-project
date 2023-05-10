@@ -147,7 +147,7 @@ class EEGNetMultiHeaded(pl.LightningModule):
         mean = torch.clamp(mean, 1e-6, 1 - 1e-6)
         variance = torch.clamp(variance, 1e-6, 1 - 1e-6)
         # First, calculate the normal NLL (without sum)
-        log_likelihood = (target * mean.log() + (1.0 - target) * (1.0 - mean).log())
+        log_likelihood = -(target * mean.log() + (1.0 - target) * (1.0 - mean).log())
 
         # Calculate loss
         loss = 0.5 * variance.log() + log_likelihood / variance
@@ -157,7 +157,7 @@ class EEGNetMultiHeaded(pl.LightningModule):
             loss = loss * variance.detach() ** beta
 
         #mean of both classes, and then sum over batch
-        return -loss.mean(dim=-1).sum(dim=-1)
+        return loss.mean(dim=-1).sum(dim=-1)
     
     
     
