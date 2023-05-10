@@ -156,8 +156,10 @@ class EEGNetMultiHeaded(pl.LightningModule):
         if beta > 0:
             loss = loss * variance.detach() ** beta
 
-        #Sum of both classes, and then mean over batch
-        return -loss.sum(dim=-1).mean(dim=-1)
+        #mean of both classes, and then sum over batch
+        return -loss.mean(dim=-1).sum(dim=-1)
+    
+    
     
     def training_step(self, train_batch, batch_idx):
         x, target = train_batch
