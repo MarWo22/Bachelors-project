@@ -73,15 +73,19 @@ Ideally, an analytical integral should be taken from this Gaussian Distribution.
 
 \subsubsection{Loss function}
 
-
+This raises a question. How can we find the optimal model parameters $\theta$, which results in the most accurate predictions of the mean, while simulatinously predicting a variance capturing the aleatoric uncertainty? The loss function should allow the model to reduce the received loss by predicting a high variance on incorrect predictions. However, it is undesirable if the model predicts high variance on all input sequences, and thus needs to be punished for predicting high uncertainty on correct predictions. One may ask how this can be achieved. Previous research by {INSERT REF} found such method to achieve this desired behavior. This method is called $\beta$-NLL.
 
 \begin{equation}
     \mathcal{L}_{\beta-NLL} := \sum_{i = 1}^{n} \left( \lfloor \hat{\sigma}^{2\beta}(X) \rfloor NLL \right)
 \end{equation}
 
+Here, the $\lfloor \rfloor$ indicates the \verb|stop gradient| operator. This makes $\lfloor \hat{\sigma}^{2\beta}(X) \rfloor$ act as a learning rate, which is dependant on the variance prediction. If $\beta$ is set to a value of 0, the loss function behaves like a normal NLL loss. If the value is set to $0.5$, interesting behaviour is observed. Now, all data points are weighted down by $\frac{1}{\sigma}$ (inverse standard deviation instead of inverse variance). Experiments conducted by {INSERT REF}, showed that $\beta = 0.5$ achieved the best balance between accuracy and log-likelihood.
+
 \begin{equation}
     NLL := \frac{1}{2}\log \hat{\sigma}^2(X) + \frac{\mathcal{L}(\theta)}{\hat{\sigma}^2(X)}
 \end{equation}
+
+To find the optimal parameters $\theta$
 
 \begin{equation}
     \mathcal{L}(\theta) := - ( Y \log \hat{\mu}(X) + (1 - Y) \log (1 - \hat{\mu}(X)) )
