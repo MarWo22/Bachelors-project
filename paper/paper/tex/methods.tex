@@ -1,0 +1,101 @@
+\section{Methods}\label{sec:methods}
+
+\subsection{Dataset}
+
+The data used for this paper originates from the 'Monitoring error-related potentials' dataset, which was created by {INSERT REF} et al. This dataset is publically available on the BCNI Horizon 2020 project website. In this dataset, users were placed in front of a screen where they had to observe a moving cursor. The working area of the screen consisted of 20 locations along the horizontal plane. A coloured square would appear either on the cursor's left or right and indicate the target to which the cursor should move. The cursor would move along the horizontal axis towards the target at each trial. Once the target has been reached, the cursor will stay in place, and a new target will appear along the horizontal plane, no more than three positions away from the cursor.
+
+During the experiments, users were asked to solely monitor the agent's performance, knowing the goal of reaching the target. They had no control over the cursor. At each trial, there was a 20\% chance for the cursor to move in the opposite direction relative to the target, which contradicts the agent's goal. These trials are labelled as 'Error-related potentials.'
+
+Six users participated in this experiment, each performing two separate recording sessions. Each session consisted of 10 blocks, of 3 minutes each. Each trial consisted of approximately 50 trials. The EEG signals were recorded at a sampling rate of 512hz.
+
+Since the users have no control over the cursor, the task is purely mental. This results in fewer signals originating from the motor complex being present in the EEG. However, the lack of physical movements also makes it easier for participants to lose focus and start mind wandering. This would inevitably result in more unwanted signals creeping into the EEG.
+
+
+\subsection{Preprocessing}
+
+\subsubsection{Filtering}
+
+EEG data is very prone to noise originating the environment. One such example is the frequencies originating from the power-line, which are 50 hz. To reduce this noise the raw data is being fed through a butterworth filter with a low-pass of 1hz, and a high pass of 10hz.
+
+\subsubsection{Epoching}
+
+The used dataset contained six different labels for trials. Two of those labels indicate that the cursor moved towards the target, which will be labeled as a 'non error-related potential'. Two other labels indicate that the cursor moved in the opposite direction compared to the target. These are labeled as 'error-related potentials'.These two labels will furtheron be referred to as \verb|ErrP| and \verb|non-ErrP| signals. The two remaining raw labels are ignored.
+
+\begin{figure}[!tbp]
+    \centering
+        \includegraphics[width=7.7cm]{img/FcZs1s1-1000ms.png}
+    \caption{Graph of the average non-ErrP and ErrP signal in the FcZ channel. These signals originate from subject 1 during session.}
+    \label{fig:FcZ}
+\end{figure}
+
+Figure \ref{fig:FcZ} shows that the largest difference between \verb|ErrP| and \verb|non-ErrP| signals occur between 200 and 500 milliseconds after the feedback presentation. For this reason, the window size will be made 600ms, to capture these differences between signals. Note that this graph only shows the FcZ channel, but this channel is the most prominent for ErrP signals.
+
+This resulted in the input EEG data being a matrix of size 64 x 308. Where the number of rows are the 64 channels of the EEG, and the number of columns are the length of the windows, 600ms of 512hz sampling rate.
+
+The dicision of feeding al 64 channels into the model was made because of two reasons. First, previous experiments {INSERT REF} have shown that feeding all channels, as opposed to pre-selecting electrodes, resulted in consistently better accuracy. Second, the main aim of this research is to study uncertainty. Having all channels could present more interesting results with regard to the amount and origin of uncertainty, as opposed to only using a select amount of channels.
+
+\subsubsection{Balancing}
+
+Due to the nature of the experiment of the used dataset, the data is inherently unbalanced with a 1/5 ratio. Only 20\% of the trials are \verb|ErrP| trials. Rebalancing is necessary to prevent the model from predicting all input episodes as \verb|non-ErrP|. To achieve this, in the training set, the under-represented class \verb|ErrP| will be over-sampled until the two classes are represented equally.
+
+To stick as close as possible to the real-world application of these classifiers, the dataset split for the training, validation and testing of the model was carefully considered. One participant is put aside for the testing set, and the remaining five participants will be used for training. Furthermore, 20 trials are randomly sampled from the training set to be used as a validation set. This results in approximately 66.7\% of the data being used for training, 16.7\% for validation, and 16.7\% for testing, with the latter being a participant the model has not yet seen in training and validation. 
+
+
+\subsection{Model}
+
+\subsubsection{Model architecture}
+
+The main body of the model architecture consists of a model called EEGNet, a compact convolutional network tailored explicitly for BCI EEG classification {INSERT REF}. This model consists of two distinct sequential blocks. 
+
+The first block consists of two convolutional steps in sequence. The first layer applies $F_1$ convolutional filters of size (1, 64), which capture the EEG signal at different band-pass frequencies. Setting $F_1$ to half the sampling rate allows for capturing frequency information at 2Hz and above. Next, a \verb|Depthwise Convolution| is applied to learn a spatial filter. After each convolutional layer, batch normalization is applied. Next, an exponential linear unit (ELU) is applied, followed by a Dropout layer to help regularize the model. Lastly, an average pooling layer is used to reduce the sampling rate to a quarter of the original sampling rate.
+
+The second block consists of a Separable Convolution, which is a Depthwise Convolution followed by $F_2$ Pointwise Convolutions. These convolutions help reduce the number of parameters to fit and explicitly decouple the relationship across feature maps. This operation separates the learning of how to summarize individual feature maps in time from how to combine these feature maps optimally. An Average Pooling Layer follows this block to reduce the free parameters in the model.
+
+In the original model, inputs are passed through the two blocks sequentially, followed by a flattened layer. This is followed by a linear layer, which gives the logits of the model's prediction. This output layer is where our model differs from the original mode. Rather than having only one layer returning the classification logits, our model uses two output layers called \verb|heads|. The first head is a linear layer returning the logits representing the \verb|mean| of the prediction. The second head is a linear layer followed by a softplus. This head returns logits representing the \verb|variance| of the model. The softplus is necessary to make the variance positive.
+
+
+\subsubsection{Sampling softmax}
+
+The goal is to capture heteroscedastic aleatoric uncertainty in the model. Currently, our model predicts two tensors. One contains the prediction of the mean of both classes. The other contains the prediction of the variance of both classes. To achieve this capture of heteroscedastic aleatoric uncertainty, a gaussian distribution is placed over the unaries.
+
+\begin{equation}
+    \hat{x}|w \sim \mathcal{N}(f^w, (\sigma^w)^2)
+\end{equation}
+
+\begin{equation}
+    \hat{p} = Softmax(\hat{x})
+\end{equation}
+
+Here, $f^w$ is the output of mean head with parameters $w$. $\sigma^w$ is the output of the variance head with parameters $w$. The prediction consists of $f^w$, which is corrupted with Gaussian noise with a variance of $\sigma^w$. The corrupted vector is then squashed with the Softmax function to obtain a vector of probabilities.
+
+Ideally, an analytical integral should be taken from this Gaussian Distribution. However, no such solution exists to achieve this. Therefore, an approximation of the integral has to be made. This is achieved through Monte Carlo integration. Here we sample from the aforementioned normal distribution, and apply the softmax function to each sample. Using these samples, we can calculate the mean and variance.
+
+
+\subsubsection{Loss function}
+
+
+
+\begin{equation}
+    \mathcal{L}_{\beta-NLL} := \sum_{i = 1}^{n} \left( \lfloor \hat{\sigma}^{2\beta}(X) \rfloor NLL \right)
+\end{equation}
+
+\begin{equation}
+    NLL := \frac{1}{2}\log \hat{\sigma}^2(X) + \frac{\mathcal{L}(\theta)}{\hat{\sigma}^2(X)}
+\end{equation}
+
+\begin{equation}
+    \mathcal{L}(\theta) := - ( Y \log \hat{\mu}(X) + (1 - Y) \log (1 - \hat{\mu}(X)) )
+\end{equation}
+
+\subsection{Explainable AI}
+
+\subsection{Experiment design}
+
+
+
+
+\subsection{$\beta$-NLL}
+
+In the original paper, the given task was a regression task, and the used loss function $\mathcal{L_{\theta}}$ was Mean Squared Error (MSE). The task of this paper is a classification task. For this, the Binary Cross Entropy loss function will be used.
+
+\subsection{Sampling softmax}
