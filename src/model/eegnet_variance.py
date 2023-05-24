@@ -197,7 +197,8 @@ class EEGNetMultiHeaded(pl.LightningModule):
                 incorrect_var.append(torch.mean(var_).item())
 
         metrics = {"test_acc": acc, 
-                   "test_loss": loss
+                   "test_loss": loss,
+                   "overall_var": torch.mean(variance)
                    }
 
         if correct_var:
