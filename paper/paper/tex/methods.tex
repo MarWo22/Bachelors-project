@@ -4,17 +4,17 @@
 
 The data used for this paper originates from the 'Monitoring error-related potentials' dataset, created by \cite{chavarriaga2010learning}. This dataset is publically available on the BCNI Horizon 2020 project website. For this experiment, users were placed in front of a screen where they had to observe a moving cursor. The working area of the screen consisted of 20 locations along the horizontal plane. A coloured square would appear on the cursor's left or right side. This square indicates the target the cursor should move towards. At each trial, the cursor would move along the horizontal axis towards the target. Once the target has been reached, the cursor will stay in place, and a new target will appear along the horizontal plane, no more than three positions away from the cursor.
 
-During the experiments, users were asked to solely monitor the agent's performance, knowing the goal of reaching the target. They had no control over the cursor. At each trial, there was a 20\% chance for the cursor to move in the opposite direction relative to the target, which contradicts the agent's goal. These trials indicate a different outcome than the participant anticipated for an 'Error Related Potential signal.'
+During the experiments, users were asked to solely monitor the agent's performance, knowing the goal of reaching the target. They had no control over the cursor. At each trial, there was a 20\% chance for the cursor to move in the opposite direction relative to the target, which contradicts the agent's goal. These trials indicate a different outcome than the participant anticipated for, to induce an Error Related Potential signal.
 
 Six users participated in this experiment, each performing two separate recording sessions. Each session consisted of 10 blocks, of 3 minutes each. Each block consisted of approximately 50 trials. The EEGs were recorded at a sampling rate of 512 Hz.
 
-Since the participants have no control over the cursor, fewer signals originating from the motor complex are present in the EEG signals, reducing the number of unwanted signals. However, the lack of physical movements, and the need for constant attention, also makes it easier for participants to lose focus and start mind wandering, inevitably resulting in more unwanted signals creeping into the EEG.
+Since the participants have no control over the cursor, fewer signals originating from the motor complex are present in the EEG signals, reducing the number of artifacts. However, the lack of physical movements, and the need for constant attention, also makes it easier for participants to lose focus and start mind wandering. This would create the risk of participants not properly observing the screen and thus not properly inducing an ErrP, leading to invalid labels. 
 
 \subsection{Preprocessing}
 
 \subsubsection{Filtering}
 
-EEG data is very prone to noise originating from its environment. One such example is the frequencies originating from the power line. To reduce this noise, the raw data is fed through a Butterworth filter with a low pass of 1Hz and a high pass of 10Hz.
+EEG data is very prone to noise originating from its environment. One such example is the frequencies originating from the power line. To reduce this noise, the raw data is fed through a Butterworth filter with a bandpass for the range [1, 10] Hz.
 
 \subsubsection{Labeling}
 
@@ -29,7 +29,7 @@ The used dataset contained six different labels for trials. Two labels indicate 
     \label{fig:FcZ}
 \end{figure}
 
-Figure \ref{fig:FcZ} shows that the most considerable difference between \verb|ErrP| and \verb|non-ErrP| signals occurs between 200 and 500 milliseconds after the feedback presentation. For this reason, the window size will be 600ms to capture these differences between signals. Note that this graph only shows the FcZ channel, which is the most prominent for ErrP signals.
+Figure \ref{fig:FcZ}, aswell as previous research on ErrP signals \citep{lopes2021online, omedes2015analysis} shows that the most considerable difference between \verb|ErrP| and \verb|non-ErrP| signals occurs between 200 and 500 milliseconds after the feedback presentation. For this reason, the window size will be 600ms to capture these differences between signals. Previous findings by \cite{correia2021error} also show that this size results in the best accuracy.
 
 This window size results in the input EEG data being a matrix of size 64 x 308. The number of rows is the 64 channels of the EEG, and the number of columns is the length of the windows, 600ms of a 512Hz sampling rate.
 
@@ -37,12 +37,14 @@ The decision to feed all 64 channels into the model was made for two reasons. Fi
 
 \subsubsection{Balancing}
 
-Due to the nature of the experiment of the used dataset, the data is inherently unbalanced with a 1/5 ratio. Only 20\% of the trials are \verb|ErrP| trials. Rebalancing is necessary to prevent the model from predicting all input episodes as \verb|non-ErrP|. The under-represented class \verb|ErrP| will be over-sampled in the training set until the two classes are represented equally.
+Due to the nature of the experiment of the used dataset, the data is inherently unbalanced with a 1/5 ratio. Only 20\% of the trials are \verb|ErrP| trials. Rebalancing is necessary to prevent the model from predicting all input episodes as \verb|non-ErrP|. The under-represented class \verb|ErrP| is over-sampled in the training set until the two classes are represented equally.
 
 The dataset split for the model's training, validation and testing was carefully considered to stick as close as possible to the real-world application of these classifiers. One participant is put aside for the testing set, and the remaining five participants will be used for training. Furthermore, 20 trials are randomly sampled from the training set to be used as a validation set. This results in approximately 66.7\% of the data being used for training, 16.7\% for validation, and 16.7\% for testing, with the latter being a participant the model has not yet seen in training and validation. 
 
 
 \subsection{Model}
+
+The model used for this paper was created using PyTorch Lightning, a machine learning framework for the Python programming language \citep{falcon2019pytorch}.
 
 \subsubsection{Model architecture}
 
@@ -57,7 +59,8 @@ In the original model, inputs are passed through the two blocks sequentially, fo
 
 \subsubsection{Sampling softmax}
 
-The goal is to capture heteroscedastic aleatoric uncertainty in the model. Currently, our model predicts two vectors. One contains the prediction of the mean of both classes. The other contains the prediction of the variance of both classes. To achieve this capture of heteroscedastic aleatoric uncertainty, a method called \verb|Sampling Softmax| is used \citep{kendall2017uncertainties}. With this method, we have to interpret the model as if it had a Gaussian distribution placed over it:
+The goal is to capture heteroscedastic aleatoric uncertainty in the model. Currently, the model predicts two vectors. One contains the prediction of the mean of both classes. The other contains the prediction of the variance of both classes. Normally, the output logits would be passed through a softmax to calculate the probabilities of each class. However, our model outputs a Guassian logit, with a mean and variance. To convert these Gaussian logits to class probabilities, we use a method called \verb|Sampling Softmax|. With this method, we interpret the output mean and variance as a Gaussian distribution:
+
 \begin{equation}
     \hat{x}|w \sim \mathcal{N}(f^w, (\sigma^w)^2)
 \end{equation}
@@ -66,7 +69,7 @@ The goal is to capture heteroscedastic aleatoric uncertainty in the model. Curre
     \hat{p} = Softmax(\hat{x})
 \end{equation}
 
-Here, $f^w$ is the output of the mean head with parameters $w$. $\sigma^w$ is the output of the variance head with parameters $w$. The prediction consists of $f^w$, which is corrupted with Gaussian noise with a variance of $\sigma^w$. The corrupted vector is then squashed with the Softmax function to obtain a vector of probabilities.
+Here, $f^w$ is the output of the mean head with parameters $w$. $\sigma^w$ is the output of the variance head with parameters $w$. The prediction consists of $f^w$, which is sampled from a Gaussian distribution with mean $w^w$ and variance of $\sigma^w$. This vector is then squashed with the Softmax function to obtain a vector of probabilities.
 
 Ideally, an analytical integral should be taken from this Gaussian Distribution. However, no such solution exists to achieve this. Therefore, an approximation of the integral has to be made. This approximation is achieved through Monte Carlo integration. Here we sample from the aforementioned normal distribution and apply the softmax function to each sample. Using these samples, we can calculate the mean and variance.
 
@@ -112,7 +115,7 @@ The advantage of using the SHAP approach is its flexibility and generality. They
 
 \subsection{Experiment design}
 
-This section describes the designs of the three experiments and the training methods used in these experiments.
+To test the uncertainty quantification of the model three experiments were conducted. The first experiment aims at measuring the impact of overall noise on the predictive uncertainty. The second experiment expands upon this and tests whether the location of the noise effects the predictive uncertainty. Lastly, the final experiment attempts to use DeepLift to identify the locations of the artificially added noise that induce uncertainty.
 
 \subsubsection{Artificial noise}
 
