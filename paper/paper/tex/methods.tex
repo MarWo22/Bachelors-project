@@ -76,29 +76,32 @@ Ideally, an analytical integral should be taken from this Gaussian Distribution.
 
 \subsubsection{Loss function}
 
-This used architecture raises a question. How can we find the optimal model parameters $\theta$, which results in the most accurate predictions of the mean while simultaneously predicting a variance capturing the aleatoric uncertainty? The loss function should allow the model to reduce the received loss by predicting a high variance on incorrect predictions. However, it is undesirable if the model predicts high variance on all input sequences and thus needs to be punished for predicting high uncertainty on correct predictions. One may ask how this can be achieved. Previous research by \cite{seitzer2022pitfalls} found such a method to achieve this desired behavior. This method is called $\beta$-NLL:
+This used architecture raises a question. How can we find the optimal model parameters $w$, which results in the most accurate predictions of the mean while simultaneously predicting a variance capturing the aleatoric uncertainty? The loss function should allow the model to reduce the received loss by predicting a high variance on incorrect predictions. However, it is undesirable if the model predicts high variance on all input sequences and thus needs to be punished for predicting high uncertainty on correct predictions. One may ask how this can be achieved. Previous research by \cite{seitzer2022pitfalls} found such a method to achieve this desired behavior. This method is called $\beta$-NLL:
+
+The core of $\beta$-NLL relies on a loss function appropriate for the task at hand. In the original paper, the task was a regression task, and the used loss function $\mathcal{L}_w$ was the mean squared error loss (MSE). In our case, the task at hand is a classification task. For this, we will use the Binary Cross Entropy loss (BCE):
+
+\begin{equation}
+    \mathcal{L}_w := - ( Y \log \hat{\mu}(X) + (1 - Y) \log (1 - \hat{\mu}(X)) )
+\end{equation}
+
+The BCE loss measures the difference between the variable's predicted probability distribution and the variable's true probability distribution. The first term in this function, $Y \log \hat{\mu}(X)$, punishes the model when it predicts a low probability $\mu(X)$ for the positive class. Similarly, the second term punishes the model when it predicts a high probability for the negative class. These two terms ensure that BCE loss penalizes the model for incorrect predictions.
+
+To find the optimal model parameters $w$, the negative log-likelihood (NLL) is used:
+
+\begin{equation}
+    NLL := \frac{1}{2}\log \hat{\sigma}^2(X) + \frac{\mathcal{L}_w}{\hat{\sigma}^2(X)}
+\end{equation}
+
+This loss measures the discrepancy between the predicted and target distributions, assuming a Gaussian distribution with mean $\mu$ and variance $\sigma^2$. Here, the left term $\frac{1}{2}\log \hat{\sigma}^2(X)$ acts as a normalization factor for the NLL loss, which ensures the model learns to predict the best possible mean and variance parameters for the given data. In the right term, $\mathcal{L}_\theta$ is the loss function used nested in the NLL loss. This loss is divided by $\hat{\sigma}^2(X)$. By dividing this loss by the variance, we ensure that the NLL loss is sensitive to the accuracy of the predicted mean $\mu$ and the uncertainty estimation encoded in the predicted variance $\sigma^2$, a higher uncertainty estimation, results in a higher dividing factor, and thus a lower loss. The first term ensures the model does not always predict a high $\sigma^2$.
+
+Finally, that brings us to the full defination of $\beta$-NLL:
+
 
 \begin{equation}
     \mathcal{L}_{\beta-NLL} := \underset{X, Y}{\mathbb{E}} \left[ \lfloor \hat{\sigma}^{2\beta}(X) \rfloor NLL \right]
 \end{equation}
 
 Here, the $\lfloor. \rfloor$ indicates the \verb|stop gradient| operator. This operator makes $\hat{\sigma}^{2\beta}(X)$ act as a learning rate, which is dependent on the variance prediction. If $\beta$ is set to 0, the loss function behaves like a normal NLL loss. If the value is set to $0.5$, interesting behaviour is observed. Now, all data points are weighted down by $\frac{1}{\sigma}$ (inverse standard deviation instead of inverse variance). Experiments by \cite{seitzer2022pitfalls} showed that $\beta = 0.5$ achieved the best balance between accuracy and log-likelihood.
-
-To find the optimal model parameters $\theta$, the negative log-likelihood (NLL) is used:
-
-\begin{equation}
-    NLL := \frac{1}{2}\log \hat{\sigma}^2(X) + \frac{\mathcal{L}_\theta}{\hat{\sigma}^2(X)}
-\end{equation}
-
-This loss measures the discrepancy between the predicted and target distributions, assuming a Gaussian distribution with mean $\mu$ and variance $\sigma^2$. Here, the left term $\frac{1}{2}\log \hat{\sigma}^2(X)$ acts as a normalization factor for the NLL loss, which ensures the model learns to predict the best possible mean and variance parameters for the given data. In the right term, $\mathcal{L}_\theta$ is the loss function used nested in the NLL loss. This loss is divided by $\hat{\sigma}^2(X)$. By dividing this loss by the variance, we ensure that the NLL loss is sensitive to the accuracy of the predicted mean $\mu$ and the uncertainty estimation encoded in the predicted variance $\sigma^2$, a higher uncertainty estimation, results in a higher dividing factor, and thus a lower loss. The first term ensures the model does not always predict a high $\sigma^2$.
-
-In the original paper, the task was a regression task, and the used loss function $\mathcal{L}_\theta$ was the mean squared error loss (MSE). In our case, the task at hand is a classification task. For this, we will use the Binary Cross Entropy loss (BCE):
-
-\begin{equation}
-    \mathcal{L}_\theta := - ( Y \log \hat{\mu}(X) + (1 - Y) \log (1 - \hat{\mu}(X)) )
-\end{equation}
-
-The BCE loss measures the difference between the variable's predicted probability distribution and the variable's true probability distribution. The first term in this function, $Y \log \hat{\mu}(X)$, punishes the model when it predicts a low probability $\mu(X)$ for the positive class. Similarly, the second term punishes the model when it predicts a high probability for the negative class. These two terms ensure that BCE loss penalizes the model for incorrect predictions.
 
 The combination of these three elements allows $\beta$-NLL to ensure that the model learns to predict an optimal mean $\mu$ and variance $\sigma^2$, capturing the aleatoric uncertainty of the model.
 
