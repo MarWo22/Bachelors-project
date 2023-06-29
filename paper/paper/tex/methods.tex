@@ -2,7 +2,7 @@
 
 \subsection{Dataset}
 
-The data used for this paper originates from the 'Monitoring error-related potentials' dataset, created by \cite{chavarriaga2010learning}. This dataset is publically available on the BCNI Horizon 2020 project website. For this experiment, users were placed in front of a screen where they had to observe a moving cursor. The working area of the screen consisted of 20 locations along the horizontal plane. A coloured square would appear on the cursor's left or right side. This square indicates the target the cursor should move towards. At each trial, the cursor would move along the horizontal axis towards the target. Once the target has been reached, the cursor will stay in place, and a new target will appear along the horizontal plane, no more than three positions away from the cursor.
+The data used for this paper originates from the 'Monitoring error-related potentials' dataset, created by \cite{chavarriaga2010learning}. This dataset is publically available on the BCNI Horizon 2020 project website. For this experiment, users were placed in front of a screen where they had to observe a moving cursor. The working area of the screen consisted of 20 locations along the horizontal plane. A colored square would appear on the cursor's left or right side. This square indicates the target the cursor should move towards. At each trial, the cursor would move along the horizontal axis toward the target. Once the target has been reached, the cursor will stay in place, and a new target will appear along the horizontal plane, no more than three positions away from the cursor.
 
 During the experiments, users were asked to solely monitor the agent's performance, knowing the goal of reaching the target. They had no control over the cursor. At each trial, there was a 20\% chance for the cursor to move in the opposite direction relative to the target, which contradicts the agent's goal. These trials indicate a different outcome than the participant anticipated for, to induce an Error Related Potential signal.
 
@@ -18,7 +18,7 @@ EEG data is very prone to noise originating from its environment. One such examp
 
 \subsubsection{Labeling}
 
-The used dataset contained six different labels for trials. Two labels indicate that the cursor moved towards the target, which will be labeled as a 'non error-related potential'. Two other labels indicate that the cursor moved in the opposite direction compared to the target. These are labeled as 'error-related potentials'. In the remainder of this paper, these two labels will be referred to as \verb|ErrP| and \verb|non-ErrP| signals. The two remaining raw labels are ignored.
+The used dataset contained six different labels for trials. Two labels indicate that the cursor moved toward the target, which will be labeled as a 'non error-related potential.' Two other labels indicate that the cursor moved in the opposite direction compared to the target. These are labeled as 'error-related potentials.' In the remainder of this paper, these two labels will be referred to as \verb|ErrP| and \verb|non-ErrP| signals. The two remaining raw labels are ignored.
 
 \subsubsection{Epoching}
 
@@ -29,7 +29,7 @@ The used dataset contained six different labels for trials. Two labels indicate 
     \label{fig:FcZ}
 \end{figure}
 
-Figure \ref{fig:FcZ}, aswell as previous research on ErrP signals \citep{lopes2021online, omedes2015analysis} shows that the most considerable difference between \verb|ErrP| and \verb|non-ErrP| signals occurs between 200 and 500 milliseconds after the feedback presentation. For this reason, the window size will be 600ms to capture these differences between signals. Previous findings by \cite{correia2021error} also show that this size results in the best accuracy.
+Figure \ref{fig:FcZ}, as well as previous research on ErrP signals \citep{lopes2021online, omedes2015analysis}, shows that the most considerable difference between \verb|ErrP| and \verb|non-ErrP| signals occurs between 200 and 500 milliseconds after the feedback presentation. For this reason, the window size will be 600ms to capture these differences between signals. Previous findings by \cite{correia2021error} also show that this size results in the best accuracy.
 
 This window size results in the input EEG data being a matrix of size 64 x 308. The number of rows is the 64 channels of the EEG, and the number of columns is the length of the windows, 600ms of a 512Hz sampling rate.
 
@@ -39,12 +39,12 @@ The decision to feed all 64 channels into the model was made for two reasons. Fi
 
 Due to the nature of the experiment of the used dataset, the data is inherently unbalanced with a 1/5 ratio. Only 20\% of the trials are \verb|ErrP| trials. Rebalancing is necessary to prevent the model from predicting all input episodes as \verb|non-ErrP|. The under-represented class \verb|ErrP| is over-sampled in the training set until the two classes are represented equally.
 
-The dataset split for the model's training, validation and testing was carefully considered to stick as close as possible to the real-world application of these classifiers. One participant is put aside for the testing set, and the remaining five participants will be used for training. Furthermore, 20 trials are randomly sampled from the training set to be used as a validation set. This results in approximately 66.7\% of the data being used for training, 16.7\% for validation, and 16.7\% for testing, with the latter being a participant the model has not yet seen in training and validation. 
+The dataset split for the model's training, validation, and testing was carefully considered to stick as close as possible to the real-world application of these classifiers. One participant is put aside for the testing set, and the remaining five participants will be used for training. Furthermore, 20 trials are randomly sampled from the training set to be used as a validation set. This results in approximately 66.7\% of the data being used for training, 16.7\% for validation, and 16.7\% for testing, with the latter being a participant the model has not yet seen in training and validation. 
 
 
 \subsection{Model}
 
-The model used for this paper was created using PyTorch Lightning, a machine learning framework for the Python programming language \citep{falcon2019pytorch}.
+The model used for this paper was created using PyTorch Lightning, a machine-learning framework for the Python programming language \citep{falcon2019pytorch}.
 
 \subsubsection{Model architecture}
 
@@ -62,21 +62,21 @@ In the original model, inputs are passed through the two blocks sequentially, fo
 The goal is to capture heteroscedastic aleatoric uncertainty in the model. Currently, the model predicts two vectors. One contains the prediction of the mean of both classes. The other contains the prediction of the variance of both classes. Normally, the output logits would be passed through a softmax to calculate the probabilities of each class. However, our model outputs a Guassian logit, with a mean and variance. To convert these Gaussian logits to class probabilities, we use a method called \verb|Sampling Softmax|. With this method, we interpret the output mean and variance as a Gaussian distribution:
 
 \begin{equation}
-    \hat{x}|w \sim \mathcal{N}(f^w, (\sigma^w)^2)
+    \hat{z}|w \sim \mathcal{N}(f_w(x_i), \sigma_w(x_i)^2)
 \end{equation}
 
 \begin{equation}
-    \hat{p} = Softmax(\hat{x})
+    \hat{p} = Softmax(\hat{z})
 \end{equation}
 
-Here, $f^w$ is the output of the mean head with parameters $w$. $\sigma^w$ is the output of the variance head with parameters $w$. The prediction consists of $f^w$, which is sampled from a Gaussian distribution with mean $w^w$ and variance of $\sigma^w$. This vector is then squashed with the Softmax function to obtain a vector of probabilities.
+Here, $f_w$ is the output of the mean head, and $\sigma_w$ is the output of the variance head with parameters $w$ and input $x_i$. The prediction consists of $\hat{z}$, which is sampled from a Gaussian distribution with mean $f_w$ and variance $\sigma_w$. This vector is then squashed with the Softmax function to obtain a vector of probabilities.
 
 Ideally, an analytical integral should be taken from this Gaussian Distribution. However, no such solution exists to achieve this. Therefore, an approximation of the integral has to be made. This approximation is achieved through Monte Carlo integration. Here we sample from the aforementioned normal distribution and apply the softmax function to each sample. Using these samples, we can calculate the mean and variance.
 
-
 \subsubsection{Loss function}
 
-This used architecture raises a question. How can we find the optimal model parameters $w$, which results in the most accurate predictions of the mean while simultaneously predicting a variance capturing the aleatoric uncertainty? The loss function should allow the model to reduce the received loss by predicting a high variance on incorrect predictions. However, it is undesirable if the model predicts high variance on all input sequences and thus needs to be punished for predicting high uncertainty on correct predictions. One may ask how this can be achieved. Previous research by \cite{seitzer2022pitfalls} found such a method to achieve this desired behavior. This method is called $\beta$-NLL:
+
+This used architecture raises a question. How can we find the optimal model parameters $w$, which results in the most accurate predictions of the meanwhile simultaneously predicting a variance capturing the aleatoric uncertainty? The loss function should allow the model to reduce the received loss by predicting a high variance on incorrect predictions. However, it is undesirable if the model predicts high variance on all input sequences and thus needs to be punished for predicting high uncertainty on correct predictions. How can this be achieved? Previous research by \cite{seitzer2022pitfalls} found such a method to achieve this desired behavior. This method is called $\beta$-NLL:
 
 The core of $\beta$-NLL relies on a loss function appropriate for the task at hand. In the original paper, the task was a regression task, and the used loss function $\mathcal{L}_w$ was the mean squared error loss (MSE). In our case, the task at hand is a classification task. For this, we will use the Binary Cross Entropy loss (BCE):
 
@@ -86,43 +86,42 @@ The core of $\beta$-NLL relies on a loss function appropriate for the task at ha
 
 The BCE loss measures the difference between the variable's predicted probability distribution and the variable's true probability distribution. The first term in this function, $Y \log \hat{\mu}(X)$, punishes the model when it predicts a low probability $\mu(X)$ for the positive class. Similarly, the second term punishes the model when it predicts a high probability for the negative class. These two terms ensure that BCE loss penalizes the model for incorrect predictions.
 
-To find the optimal model parameters $w$, the negative log-likelihood (NLL) is used:
+The second part of $\beta$-NLL consists of the negative log-likelihood:
 
 \begin{equation}
     NLL := \frac{1}{2}\log \hat{\sigma}^2(X) + \frac{\mathcal{L}_w}{\hat{\sigma}^2(X)}
 \end{equation}
 
-This loss measures the discrepancy between the predicted and target distributions, assuming a Gaussian distribution with mean $\mu$ and variance $\sigma^2$. Here, the left term $\frac{1}{2}\log \hat{\sigma}^2(X)$ acts as a normalization factor for the NLL loss, which ensures the model learns to predict the best possible mean and variance parameters for the given data. In the right term, $\mathcal{L}_\theta$ is the loss function used nested in the NLL loss. This loss is divided by $\hat{\sigma}^2(X)$. By dividing this loss by the variance, we ensure that the NLL loss is sensitive to the accuracy of the predicted mean $\mu$ and the uncertainty estimation encoded in the predicted variance $\sigma^2$, a higher uncertainty estimation, results in a higher dividing factor, and thus a lower loss. The first term ensures the model does not always predict a high $\sigma^2$.
+This loss measures the discrepancy between the predicted and target distributions, assuming a Gaussian distribution with mean $\mu$ and variance $\sigma^2$. Here, the left term $\frac{1}{2}\log \hat{\sigma}^2(X)$ acts as a normalization factor for the NLL loss, which ensures the model learns to predict the best possible mean and variance parameters for the given data. In the right term, $\mathcal{L}_w$ is the loss function used nested in the NLL loss. This loss is divided by $\hat{\sigma}^2(X)$. By dividing this loss by the variance, we ensure that the NLL loss is sensitive to the accuracy of the predicted mean $\mu$ and the uncertainty estimation encoded in the predicted variance $\sigma^2$, a higher uncertainty estimation, results in a higher dividing factor, and thus a lower loss. The first term ensures the model does not always predict a high $\sigma^2$.
 
-Finally, that brings us to the full defination of $\beta$-NLL:
 
+Lastly, an extra hyperparameter is introduced to finalize the definition of $\beta$-NLL:
 
 \begin{equation}
     \mathcal{L}_{\beta-NLL} := \underset{X, Y}{\mathbb{E}} \left[ \lfloor \hat{\sigma}^{2\beta}(X) \rfloor NLL \right]
 \end{equation}
 
-Here, the $\lfloor. \rfloor$ indicates the \verb|stop gradient| operator. This operator makes $\hat{\sigma}^{2\beta}(X)$ act as a learning rate, which is dependent on the variance prediction. If $\beta$ is set to 0, the loss function behaves like a normal NLL loss. If the value is set to $0.5$, interesting behaviour is observed. Now, all data points are weighted down by $\frac{1}{\sigma}$ (inverse standard deviation instead of inverse variance). Experiments by \cite{seitzer2022pitfalls} showed that $\beta = 0.5$ achieved the best balance between accuracy and log-likelihood.
+Here, the $\lfloor. \rfloor$ indicates the \verb|stop gradient| operator. This operator makes $\hat{\sigma}^{2\beta}(X)$ act as a learning rate, which is dependent on the variance prediction. If $\beta$ is set to 0, the loss function behaves like a normal NLL loss. If the value is set to zero, the learning rate changes linearly with the predicted variance. Experiments by \cite{seitzer2022pitfalls} showed that $\beta = 0.5$ achieved the best balance between accuracy and log-likelihood.
 
 The combination of these three elements allows $\beta$-NLL to ensure that the model learns to predict an optimal mean $\mu$ and variance $\sigma^2$, capturing the aleatoric uncertainty of the model.
-
 
 \subsection{Explainable AI}
 
 To understand what our model is doing and explain where the uncertainty originates from, we need to introduce a method of Explainable AI to our model. For this, a method based on Shapley values will be used.
 
-\verb|Shapley values| are a concept originating from the cooperative game theory field. They provide a way of allocating a value generated by a group of players to each player. This strategy has been widely adapted to the field of machine learning. They attribute each input feature's contribution to the model's final prediction. This resulting attribution method is called \verb|SHAP| (SHapley Adaptive exPlanations)
+\verb|Shapley values| are a concept originating from the cooperative game theory field. They provide a way of allocating a value generated by a group of players to each player. This strategy has been widely adapted to the field of machine learning. They attribute each input feature's contribution to the model's final prediction. This resulting attribution method is called \verb|SHAP| (SHapley Adaptive exPlanations) \citep{NIPS2017_7062}.
 
-The key idea behind SHAP values is to decompose the model's output into the contribution of each input feature while also considering their relations with the other features. Exact calculations are practically impossible to calculate for larger inputs. Instead, the SHAP values are calculated by approximation. This algorithm involves sampling a subset of the features and computing the SHAP values for each sample. The final values are then averaged over all samples to estimate the feature importance.
+The key idea behind Shapley values is to decompose the model's output into the contribution of each input feature while also considering their relations with the other features. Exact calculations are practically impossible to calculate for larger inputs. Instead, the Shapley values are calculated by approximation, relying on a method called DeepLift \citep{shrikumar2017learning}. This method involves taking a reference input and calculating the activations of all the neurons in the network. Next, the input of which the Shapley values needs to be calculated is fed through the network, and the activations of all neurons are computed layer by layer. The difference between the current and reference activations for the output neuron of interest is calculated. This difference signifies the contribution. This difference is then propagated backward through the network with propagation rules. With these rules, the values are distributed between the input features based on the contributions to the activation differences. This final distribution indicates the contribution of each input feature to the current output. 
 
-The advantage of using the SHAP approach is its flexibility and generality. They can be applied to various models, including classification tasks. Moreover, they provide a rich and interpretable representation of the model's behaviour. Another advantage of SHAP values is that we can differentiate between the two heads. Using SHAP, we can build an understanding of how each feature contributed solely to the mean prediction and how they contributed solely to the variance prediction. The latter is of high interest in explaining the origins of the uncertainty. 
+The advantage of using this approach is its speed, flexibility, and generality. They can be applied to various models, including classification tasks. Moreover, they provide a rich and interpretable representation of the model's behavior. Another advantage of this approach is that we can differentiate between the two heads. Using this, we can build an understanding of how each feature contributed solely to the mean prediction and how they contributed solely to the variance prediction. The latter is of high interest in explaining the origins of the uncertainty. 
 
 \subsection{Experiment design}
 
-To test the uncertainty quantification of the model three experiments were conducted. The first experiment aims at measuring the impact of overall noise on the predictive uncertainty. The second experiment expands upon this and tests whether the location of the noise effects the predictive uncertainty. Lastly, the final experiment attempts to use DeepLift to identify the locations of the artificially added noise that induce uncertainty.
+To test the uncertainty quantification of the model, three experiments were conducted. The first experiment measures the overall noise's impact on the predictive uncertainty. The second experiment expands upon this and tests whether the noise location affects the predictive uncertainty. Lastly, the final experiment attempts to use DeepLift to identify the locations of the artificially added noise that induce uncertainty.
 
 \subsubsection{Artificial noise}
 
-To properly test whether our suggested approach captures aleatoric uncertainty, we need a method of artificially introducing noise to our data to invoke this uncertainty. Optimally, in the bane of BCIs, we would like to add noise to the data, which frequently occurs on EEG data. However, artificially adding physiological artefacts, such as muscle movements, is beyond our reach and could be an exciting topic for further research. For this paper, we keep the artificial noise simple. The first method of artificial noise generation is adding Gaussian noise to our data. Each data point, within the desired range, will receive noise sampled from a Gaussian distribution of varying intensity. The second method of applying artificial noise is designed to simulate faulty or improperly connected sensors. This method will set a random amount of data points to zero within a specific range.
+To properly test whether our suggested approach captures aleatoric uncertainty, a method of artificially introducing noise to our data is needed to invoke this uncertainty. Optimally, considering the task involves EEGs, we would like to add noise to the data, which frequently occurs on EEG data. However, artificially adding physiological artifacts, such as muscle movements, is beyond our reach but could be an exciting topic for further research. For this paper, we keep the artificial noise simple. The first method of artificial noise generation is adding Gaussian noise to our data. Each data point, within the desired range, will receive noise sampled from a Gaussian distribution of varying intensity. The second method of applying artificial noise is designed to simulate faulty or improperly connected sensors. This method will set a random amount of data points to zero within a specific range. This noise is added to both the training and testing set.
 
 \begin{figure}[!tbp]
     \centering
@@ -135,7 +134,7 @@ Figure \ref{fig:noise} shows an example of artificially generated noise. The gre
 
 \subsubsection{Experimental setup}
 
-Each experiment uses the same hyperparameters optimal for EEGNet, suggested by \cite{lawhern2018eegnet}. Each training run will last for 50 epochs. This amount showed to be a good balance between performance and computational time. Each training session is averaged over a total of six runs. Each run uses a different participant as the test participant. The training was done using an NVIDIA GTX 1070 and took around 30 minutes per training session of six runs with 50 epochs each.
+Each experiment uses the same hyperparameters optimal for EEGNet, suggested by \cite{lawhern2018eegnet}. Each training run will last for 25 epochs. This amount showed to be a good balance between performance and computational time. Each training session is averaged over a total of six runs. Each run uses a different participant as the test participant. The training was done using an NVIDIA GTX 1070 and took around 15 minutes per training session of six runs with 25 epochs each.
 
 \subsubsection{Effect of general noise}
 
@@ -145,8 +144,8 @@ This experiment will accompany a test where labels are shuffled with increasing 
 
 \subsubsection{Effect of localized noise}
 
-The second experiment will test whether the location of the added noise affects the predicted uncertainty. Two training sessions will be completed here, each with a different input data section corrupted. Both sections have an equal length and intensity of noise. One section will be located on the area with the most contribution to input data, which will be located using the SHAP approximation on the mean head. The second location will be an area with the most minor contribution to the output. Adding noise to the high-contribution areas is expected to result in a more substantial increase in uncertainty than adding noise to the low-contribution areas.
+The second experiment will test whether the location of the added noise affects the predicted uncertainty. Two training sessions will be completed here, each with a different section of the input data to which artificial noise has been added. Figure \ref{fig:FcZ}, as well as previous research \citep{lopes2021online, omedes2015analysis}, shows that the most considerable difference between \verb|ErrP| and \verb|non-ErrP| signals are within the 200-500ms region. This region is expected to have the most substantial contribution to the classification. Thus, adding noise to this region should result in a higher uncertainty than a different region. This is tested by adding noise of equal intensity to the region of 0-250ms and 250-500ms. It is thus expected that noise added to the latter region should result in a higher predicted variance.
 
-\subsubsection{Tracable noise}
+\subsubsection{Traceable noise}
 
-For the final experiment, we test whether we can trace the uncertainty through the SHAP approximation. Here, we add localized noise to some regions of the input data. Afterwards, the SHAP approximation is taken and compared to the SHAP approximation of the original input data. We expect that a shift in the SHAP values is noticeable. Ultimately, the area where we added noise should have higher uncertainty than the other areas and can be located by plotting the SHAP values.
+The third and final experiment tests whether it is possible to trace the uncertainty by calculating the Shapley values. Here, we add localized noise to the same regions as the second experiment. After training, the Shapley values of the variance prediction of ten ErrP signals are calculated using the method mentioned in section 2.4 and are averaged across all channels. Ultimately, there should be a difference in Shapley values between the signals with different locations of uncertainty. The regions to which the artificial noise has been added should have a higher uncertainty than the other areas. If this is the case, and the difference is strong enough, it could point toward the location of the uncertainty.

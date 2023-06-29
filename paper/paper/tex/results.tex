@@ -1,67 +1,70 @@
 \section{Results}\label{sec:results}
 
+The proposed model is tested on three aspects with the experiments mentioned above. The global noise and label shuffling experiments test whether the model can predict its variance accordingly. The experiment on localized noise checks whether the location of noise affects the predicted variance. Lastly, the traceable noise experiment checks whether the source of uncertainty can be located using Shapley values.
 
 \subsection{Base variance predictions}
 
-Figure \ref{fig:histogram} shows a histogram with the variance distribution on correct and incorrect predictions. From this histogram, one can observe that the model's classification is almost always correct when it is paired with a low variance prediction. The higher the model's predicted variance becomes, the more often the classification is incorrect. Although the two histograms overlap, there is a clear skew towards higher variances for the incorrect predictions. On the highest variance predictions ranging from $0.24$ to $0.25$, the distribution between correct and incorrect classifications is nearly equal, indicating that the model is randomly guessing the classification.
+Figure \ref{fig:histogram} shows the distribution of the predicted variances on correct and incorrect predictions. From this histogram, one can observe that the model's classification is almost always correct when it is paired with a low variance prediction. The higher the model's predicted variance becomes, the more often the classification is incorrect. Although the two histograms overlap, there is a clear skew towards higher variances for the incorrect predictions. On the highest variance predictions ranging from $0.24$ to $0.25$, the distribution between correct and incorrect classifications is nearly equal, indicating that the model is randomly guessing the classification.
 
 \begin{figure}[!tbp]
     \centering
         \includegraphics[width=7.7cm]{img/histogram.png}
-    \caption{Histogram with the frequencies of variance predictions for correct and incorrect predictions.}
+    \caption{Histogram with the frequencies of variance predictions for correct and incorrect predictions. A higher predicted variance indicates a higher probability of an incorrect prediction.}
     \label{fig:histogram}
 \end{figure}
 
 
 \subsection{General noise}
 
-Figure \ref{fig:label_shuffle} shows the effect of shuffling the labels of training and testing data on the model's predicted variance. Here, it is clear that there is an increase in variance as more labels in the training and testing set are shuffled. However, this difference is not very large, as there is only an increase of approximately $0.027$, with relatively high variance between runs. However, the overall increasing behavior of the variance's head output is as expected. It indicates that the model is working as intended and is predicting the variance based on the quality of the input.
+Figure \ref{fig:label_shuffle} shows the effect of shuffling the labels of training and testing data on the model's predicted variance. Here, it is clear that there is an increase in predicted variance as more labels in the training and testing set are shuffled. However, this difference is not very large, with only an increase of approximately $0.027$, with a relatively high difference between runs. The overall behavior of the variance's head output is as expected: as more labels are shuffled, and thus the worse the data becomes and the stronger the uncertainty gets, increasing the predicted variance.
 
 \begin{figure}[!tbp]
     \centering
         \includegraphics[width=7.7cm]{img/label_shuffle.png}
-    \caption{The effect of label shuffling on the output of the variance head.}
+    \caption{The effect of label shuffling on the output of the variance head. An increase in the percentage of labels shuffled results in an increase of the predicted variance.}
     \label{fig:label_shuffle}
 \end{figure}
 
 
-Figure \ref{fig:general} shows two measurements of the model. The two leftmost plots show the predicted variance of the model, whereas the two rightmost plots show the model's accuracy. The top plots show the behavior when Gaussian noise is added to the entire length of the signal, whereas the bottom plots show the behavior when channels are entirely zeroed. The x-axis here represents the \verb|severity|, which indicates the strength of the noise. Higher values indicate that the added noise is of higher magnitude (in the case of Gaussian noise), occurring in more channels per episode and affecting more episodes in general.
+Figure \ref{fig:general} shows two measurements of the model. The two plots on the left show the predicted variance of the model, whereas the two plots on the right show the model's accuracy. The top plots show the behavior when Gaussian noise is added to the entire signal length, whereas the bottom plots show the behavior when channels are entirely zeroed. The x-axis here represents the \verb|severity|, which indicates the strength of the noise. Higher values indicate that the added noise is of higher magnitude (in the case of Gaussian noise), occurring in more channels per episode and affecting more episodes in general.
 
-As can be seen from these plots, there is a clear increase in the predicted variance as the severity of the noise increases. This increase is present for the Gaussian noise and zeroing methods. Secondly, there is a clear decrease in accuracy as the severity of the noise increases. This behavior is also present for both types of noise. However, like the previous experiment, it is paired with a high variance between runs.
+As can be seen from these plots, there is an apparent increase in the predicted variance as the severity of the noise increases. This increase is present for the Gaussian noise and zeroing methods. Furthermore, there is an apparent decrease in accuracy as the severity of the noise increases. This behavior is also present for both types of noise. However, like the previous experiment, it is paired with a high difference between runs.
 
 \begin{figure}[!tbp]
     \centering
         \includegraphics[width=7.7cm]{img/general.png}
-    \caption{The effect of different intensities of artificial noise added to the entire signal length on the model's accuracy and variance.}
+    \caption{The effect of different intensities of artificial noise added to the entire signal length on the model's accuracy and variance. A higher intensity of noise results in higher predicted variance and lower accuracy.}
     \label{fig:general}
 \end{figure}
 
 \subsection{Localized noise}
 
-Figure \ref{fig:local} shows the influence of the location to which the noise has been added on both the variance and accuracy of the model. The leftmost plots show the predicted variance of the model, whereas the rightmost plots show the model's accuracy. The top plots show the behavior when Gaussian noise is added to the data, whereas the bottom plots show the behavior when channels are zeroed. The leftmost column shows the effect of the noise being added on the 0-250ms region, whereas the rightmost column shows the effect of the noise being added on the 250-500ms region.
+Figure \ref{fig:local} shows the effect of localized noise on the variance and accuracy of the model. Here, the plots on the left show the predicted variance of the model, whereas the plots on the right show the model's accuracy. The top plots show the behavior when Gaussian noise is added to the data, whereas the bottom plots show the behavior when channels are zeroed. The left bar shows the effect of noise added on the 0-250ms region, whereas the right bar shows the effect of noise added on the 250-500ms region.
 
-As can be observed from these plots, the general trend for both models is that the variance is higher when noise is added to the 250-500 ms region than the 0-250 ms region. The accuracy is slightly lower when the noise is added to the 250-500 ms region than the 0-250 ms region. It also observed that zeroing has a stronger effect on the variance and accuracy than Gaussian noise. This behavior is according to expectation since a Gaussian noise corrupted signal still resembles the original signal to some extent, regardless of the degree of Gaussian noise. Moreover, when averaging many signals corrupted with Gaussian noise, the noise will balance each other out. In contrast, the zeroing of signals does not resemble the original signal. The observation that noise on the 250-500 ms region substantially influences the accuracy and variance compared to the 0-250 ms region is as expected, as previous research showed that the most prominent part of the \verb|ErrP| signal occurs within this window. 
+As can be observed from these plots, the general trend for both models is that the variance is higher when noise is added to the 250-500 ms region than the 0-250 ms region. For Gaussian noise, the accuracy is slightly lower when the noise is added to the 250-500 ms region than the 0-250 ms region. For the zeroed signal, the accuracy is decreased by approximately $20\%$. This shows that zeroing has a more substantial effect on the accuracy and variance. This behavior is according to expectation. When a signal has Gaussian noise added to it, the original signal still contributes to this resulting noisy signal. When a signal is zeroed, the original signal has no contribution to this resulting signal. Moreover, when averaging many signals corrupted with Gaussian noise, the noise will balance each other out. With zeroing, this does not happen. The observation that noise on the 250-500 ms region influences the accuracy and variance compared to the 0-250 ms region is as expected, as previous research showed that the most prominent part of the \verb|ErrP| signal occurs within this window \citep{lopes2021online, omedes2015analysis}. 
 
-However, the differences between these two regions in accuracy and variance are minimal and are similar to the previous experiments, paired with high variance between runs.
+
+However, the difference in variance between the two regions is minimal, with only a $0.01$ increase for the zeroed signal and even less for the signal with Gaussian noise. And similar to the previous experiments, it is paired with a high difference between runs.
 
 \begin{figure}[!tbp]
     \centering
         \includegraphics[width=7.7cm]{img/local.png}
-    \caption{The effect of strong noise added to two different regions of the signal on the accuracy and variance of the model. The two regions tested are the ranges of 0ms to 250ms and 250ms to 500ms.}
+    \caption{The effect of strong noise added to two different regions of the signal on the accuracy and variance of the model. Noise added to the 0-250ms region results in a higher predicted variance and lower accuracy than noise in the 250-500ms region.}
     \label{fig:local}
 \end{figure}
 
-\subsection{Tracable noise}
+\subsection{Traceable noise}
 
-Figure \ref{fig:shap} shows the single-dimensional heatmaps of the Shapley values of the predictions of the variance head. Here, the Shapley values are depicted as a continuous color palate referring to the contribution of the data points. Lighter colors (yellow) indicate a strong positive contribution to the prediction, and darker colors (blue) indicate a strong negative contribution to the variance prediction. Here, the Shapley values are averaged over all channels.
+Figure \ref{fig:shap} shows the Shapley values of the predictions of the ErrP variance head on ErrP signals. They have been averaged over 10 trials and across all channels. Furthermore, a rolling average is used to reduce local oscillations. The left plot shows the Shapley values of the data to which Gaussian noise has been added. The right plot shows the Shapley values of the data where sections have been zeroed. Values above zero indicate a positive contribution to the variance prediction. Whereas values below zero indicate a negative contribution.
 
-Comparing these single-dimensional heatmaps yields various observations. Firstly, there is a noticeable difference between the Shapley values of the original signals and the signals with artificial noise added to them. In the case of the Gaussian Noise variant, it is clear to which area the noise has been added due to the oscillating behavior of the Shapley values. This oscillating behavior originates from the Gaussian noise adding large differences between adjacent data points. This oscillating behavior will most likely disappear when computing and averaging the Shapley values over more episodes since the noisy signal will average to the original signal. However, the computational cost of approximating these Shapley values is very high. Thus this plot only shows an average of 10 test episodes. When ignoring this oscillating behavior and judging only from the contribution distribution, one cannot find the location of the noise present in the signal. The contribution distribution between the data with noise on the 0-250ms and 250-500ms regions is nearly indistinguishable.
+Comparing the Shapley values of the models yields various interesting observations. Firstly, when comparing the values from the model trained on the noisy data, shown in orange and green, to the one trained on the original data, shown in blue, we observe a noticeable difference between the Shapley values. From the models trained on data modified with Gaussian noise, it is clear that the Shapley values have an oscillating behavior, which the original model does not show. This oscillating behavior originates from the large differences between adjacent data points introduced by the Gaussian noise. When taking the Shapley values of many episodes, this behavior will reduce since the Gaussian noise is averaged out. However, the computational cost of approximating these Shapley values is very high. Thus the plot only shows a mean of 10 test episodes. Interestingly, the two Gaussian models have an overlapping peak of contribution, regardless of the position the noise has been added to, which is not present in the original signal. This is also visible in the zeroed models but is less significant. This behavior is unexpected, and there is most likely some underlying relation causing this, which we are not aware of.
 
-As for the signal with the artificially zeroed channels, much of the same behavior is present. There is a clear distinction between the Shapley values of the original and modified signals. In this case, there is a noticeable difference between the two noisy signals, and in the case of the zeroing being added to the 0-250ms region, a higher contribution to the variance is present in this region. However, this behavior is unclear on the signal zeroed on the 250-500ms region.
+As mentioned before, we expect an increase in the contribution to the predicted variance for the noisy models on the sections the noise has been added to. For both plots, this increase is not clearly visible. As for the Shapley values from the models trained on data modified with Gaussian noise, there is a slight increase in contribution in the 0-250ms region on inputs with noise in this area. However, in the 250-500ms region, the contributions are nearly equal. The same behavior is seen for the zeroed models, with the noise in the latter region even showing a lower contribution in that region. 
+
 
 \begin{figure}[!tbp]
     \centering
         \includegraphics[width=7.7cm]{img/shap.png}
-    \caption{Plot with the Shapley values of the various signals. The left plot holds the Guassian noise signals, and the right plot holds the zeroed signals. All values have been normalized to the range of -1 to 1}
+    \caption{The Shapley values of the various models. The left plot shows the Shapley values of Gaussian noise data, and the right plot shows the values of data with zeroed sections. Values above 0 (the black line) indicate a positive contribution, and all values below 0 indicate a negative contribution.}
     \label{fig:shap}
 \end{figure}
